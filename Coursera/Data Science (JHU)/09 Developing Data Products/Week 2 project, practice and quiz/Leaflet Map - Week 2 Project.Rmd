@@ -1,0 +1,34 @@
+---
+title: "Leaflet, Kiev Black and White Map - Week 2 Project"
+author: "Andrey Budish"
+date: "April 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+```{r}
+library(leaflet)
+df <- data.frame(
+        lat = c(50.440328, 50.438594, 50.431827),
+        lng = c(30.471775, 30.474641, 30.478971))
+marks <- c("Home, sweet home",
+           "Best cofee in the city",
+           "<a href='https://www.youtube.com/watch?v=JJpaDTQujMg'>School of Men</a>")
+
+df %>%
+        leaflet() %>%
+        addTiles() %>%
+        addMarkers(popup = marks) %>%
+        addRectangles(lat1 = 50.451773, lng1 = 30.519521,  
+                      lat2 = 50.448284, lng2 = 30.526820, 
+                      label="The Heart of Kiev") %>%
+        addMiniMap() %>%
+        addProviderTiles(providers$Stamen.Toner)
+# 50.450773, 30.521882
+# 50.451347, 30.522598
+# 50.450430, 30.524337
+# 50.449872, 30.523548
+```

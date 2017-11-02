@@ -1,0 +1,173 @@
+---
+title: "Regression Models - Course Project"
+author: "Andrey Budish"
+date: "April 14, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Instructions
+You work for *Motor Trend*, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:  
+ **1. Is an automatic or manual transmission better for MPG**  
+ **2. Quantify the MPG difference between automatic and manual transmissions**  
+ 
+## Executive Summary  
+
+**1. We used multivariable linear regression analysis and found a signficant difference between the mean MPG for automatic and manual transmission cars.**  
+**2. Using manual transmissions results in a higher value of MPG compared to automatic transmission, the increase is approximately 2.1 MPG, if use the best model, which include type of transmission, the weight of a car and horsepower as predictors.**
+
+## 1. Exploratory data analysis
+Let's take a quick look on the **mtcars** data set
+```{r}
+head(mtcars, n = 2)
+```
+
+The data is described [here](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html).    
+
+
+Transmission type **am** has numeric class:
+```{r}
+class(mtcars$am)
+```
+Let's change it to factor and also change 0 values to Automatic and 1 values to Manual for better readability: 
+```{r}
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic", "Manual")
+```
+### Check MPG distribution
+
+Since we will be predicting MPG we need to know if data in the sample is normally distributed.  
+We will use Shapiro-Wilk test:  
+```{r}
+shapiro.test(mtcars$mpg)$p.value
+```
+p-value > 0.05, so we fail to reject the null hypothesis, that data is normally distributed.  
+Using Q-Q plot will help us to additionaly check normality of the data:
+```{r}
+qqnorm(mtcars$mpg, main = "Figure 1: \n MPG Q-Q plot")
+qqline(mtcars$mpg, col = "red")
+```  
+
+Mostly points are on the red line. The positions of the points which are not on the line is explained by small sample size, n = 32, and as a result bigger variance.  
+
+### Automatic vs manual transmission boxplot
+To compare automatic versus manual transmission influence on miles per gallon it would be useful to make a relevant box plot:
+```{r, echo=FALSE}
+boxplot(mpg~am, data = mtcars,
+        xlab = "Transmission",
+        ylab = "Miles per Gallon",
+        main = "Figure 2: \n MPG by Transmission Type",
+        col = c("orange", "green"))
+```  
+
+Plot shows a certain difference in the MPG by transmission type. We need to test this assumption.    
+
+## 2. Hypothesis testing
+Let's look at the means of miles per gallon for both automatic and manual transmission:
+```{r}
+aggregate(mpg ~ am, data = mtcars, mean)
+```
+Is this difference, 7.25 MPG, really significant? Let's perform a relevant unpaired t-test with unequal variance, where we assume that using manual transmission
+results in greater miles per gallon.
+
+```{r}
+manual <- subset(mtcars, am == "Manual", select = mpg)
+auto <- subset(mtcars, am == "Automatic", select = mpg)
+t.test(manual, auto, alternative = "greater")$p.value
+```
+p-value is less than 0.05 which confirms our assumption that using manual transmission better than automatic for miles per gallon value. But we didn't consider other variables influence on MPG.
+
+## 3. Model selection
+### Simple model - one predictor
+Let's begin our model selection with the simplest model by predicting mpg by only one variable - type of transmission
+```{r}
+basic <- lm(mpg ~ am, mtcars)
+```
+```{r}
+summary(basic)$coef
+summary(basic)$r.squared
+```
+ Pr(>|t|) are less than 0.05 for manual and automatic(Intercept) transmission demonstrate that it is right to include transmission type for predicting MPG.  
+ 
+The value of multiple R-squared of 0.36 tells us that only 36% of total variance explained by our model. That means that we should add other regressors to fit our model better.  
+
+### Choosing multiple predictors
+Firstly, to understand what predictors should be included we will investigate correlation matrix, which will show correlation of variables between each other.  
+We will exclude **am** variable from correlation matrix since we know it should be included in the model anyway.    
+```{r, warning=FALSE, message=FALSE}
+# excluding am variable, 9th column
+cars_without_am <- mtcars[, - 9]
+library(PerformanceAnalytics)
+chart.Correlation(cars_without_am, main = "Figure 3: Correlation matrix")
+# Pick only the correlations of MPG:
+cor_mpg <- cor(cars_without_am)[-1, 'mpg']
+# Show correllations of MPG in the descending order
+sort(round(cor_mpg, digits = 2))
+```
+As we can see **mpg** variable is strongly *(>0.7 and <-0.7)* and moderately*( [-0.7,0.5] and [0.5,-0.7])* correlated with almost all variables. Red star chars (\*\*\*, \*\*, \*) in the correlation matrix show how significant those result are.
+Including all variables in the model would be wrong, since it increases standard error of the beta coefficients.  
+Let's pick only regressors strongly correlated to  MPG and build a relevant model.  
+That would be: **wt, cyl, disp, hp and am**(should be included anyway)
+
+```{r, warning=FALSE}
+mx <- lm(mpg ~ am + wt + cyl + disp + hp , data = mtcars )
+```
+#### Variance Infaltion Factors
+Next we will explore variance inflation factors:
+```{r, warning=FALSE}
+# library car is loaded to use vif()
+library(car)
+vif(mx)
+```
+As we can see both **cyl** and **disp** have high inflation factors, that means that they are highly correlated. We can safely leave out one of them  and build a simpler model. Let us omit **disp**.
+
+```{r}
+my <- lm(mpg ~ am + wt + cyl + hp, data = mtcars )
+vif(my)
+```
+Now **cyl** and **hp** are highly correlated. Let us leave out **cyl** 
+```{r}
+
+mz <- lm(mpg ~ am + wt + hp , data = mtcars )
+vif(mz)
+```
+In final model **mz** variance inflation factors for all regressors are small (vif < 5). That means we do not need to omit any of the left regressors.  
+
+#### ANOVA  
+Next we will perform analysis of variance of all **4 nested models: basic, mz, my and mx**.
+```{r}
+anova(basic, mz, my, mx)
+```
+As we can see **adding wt and hp** to the basic model **was significant**, **adding cyl and disp in the next models was not significant**. That means that **Model 2, mz is the best among those 4 models**.  
+
+#### Residuals plots of final model  
+Let us use residuals plots to check goodness of the model fit:
+```{r}
+par(mfrow = c(2,2), oma=c(0,0,4,0))
+plot(mz, main = NULL)
+title("Figure 4: Residuals plots of final model", outer=TRUE)
+```  
+
+Residuals plots confirm goodness of fit.
+
+#### Summary of final model  
+In the end let us look at the **summary of mz**:  
+
+```{r}
+sum_mz <- summary(mz)
+sum_mz$coefficients
+sum_mz$adj.r.squared
+# Difference in MPG between manual and automatic transmissions
+sum_mz$coefficients[2, 1]
+```
+## 4. Conclusion
+**Our final model mz, which includes am, wt and hp as regressors to predict MPG, explains 82 % of total variance (adjusted r_squared).**  
+
+**The difference between manual and automatic transmissions is 2.1 in MPG, if we hold other variables constant, which still shows us that manual transmission is better for MPG.**  
+
+**At the same time, there are some caveats: we assumed that MPG data comes from normal distribution, which might be wrong; we also used only variables that we were able to get from mtcars data set. There might be other variables that should be included in the model which we don't know about.**  

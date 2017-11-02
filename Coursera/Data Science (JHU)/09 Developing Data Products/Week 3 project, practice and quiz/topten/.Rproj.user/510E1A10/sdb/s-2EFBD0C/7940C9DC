@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# Read data\narticles <- read.csv(\"report-summer-2016-all.csv\", sep = \";\")\n\n# Find data with and without topics\narticles_with_topic <- subset(articles, EditorialTopic != \"\\\\N\" )\narticles_without_topic <- subset(articles, EditorialTopic == \"\\\\N\" ) # later will be used to predict topics\n\n\n\n# Training and test sets\nlibrary(caret)\nlibrary(nnet)\nlibrary(Hmisc)\ninTrain <- createDataPartition(y=articles_with_topic$EditorialTopic,p=0.7, list=FALSE)\ntraining <- articles_with_topic[inTrain,]\ntesting <- articles_with_topic[-inTrain,]\n\n\ntraining$SocialFb <- cut2(training$SocialFb, g=5)\n\n\n\n\nmodel <- glm(EditorialTopic ~.,family=binomial(link='logit'),data=training)\n\nmodel <- multinom(EditorialTopic ~., data=training[, -])\n",
+    "created" : 1492795506659.000,
+    "dirty" : true,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "2333343401",
+    "id" : "7940C9DC",
+    "lastKnownWriteTime" : 31525549581926447,
+    "last_content_update" : 1492799461472,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
