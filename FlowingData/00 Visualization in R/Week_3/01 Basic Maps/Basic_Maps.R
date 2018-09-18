@@ -7,7 +7,7 @@ head(costcos)
 plot(costcos$Longitude, costcos$Latitude)
 
 # Install package if needed
-install.packages("maps", dependencies=TRUE)
+# install.packages("maps", dependencies=TRUE)
  
 # Load maps package
 library(maps)
