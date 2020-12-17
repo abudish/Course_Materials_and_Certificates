@@ -51,7 +51,7 @@ t2
 chisq.test(t2)
 
 
-# Fisher's Exact Test
+# Fisher's Exact Test - используется, когда мало наблюдений хотя бы в одной из групп
 fisher.test(t2)
 
 
@@ -73,7 +73,7 @@ HairEyeColor[ , ,'Male']
 # Ваша задача в переменную red_men 
 # сохранить долю рыжеволосых (Red) от общего числа голубоглазых мужчин.
 blueMaleProportions <- prop.table(HairEyeColor[, 'Blue', 'Male'])
-red_men <- blueMale['Red']
+red_men <- blueMaleProportions['Red']
 
 
 # С таблицами, как и с матрицами, можно совершать разные арифметические операции,
